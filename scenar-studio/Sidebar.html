@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Google Sans', Roboto, Arial, sans-serif;
+      background: #111408;
+      color: #f0ff2b;
+      font-size: 13px;
+      padding: 12px;
+    }
+    h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(240,255,43,0.55);
+      margin: 18px 0 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    button {
+      background: none;
+      border: 1px solid rgba(240,255,43,0.35);
+      border-radius: 8px;
+      color: #f0ff2b;
+      padding: 9px 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    button:hover { border-color: #f0ff2b; background: rgba(240,255,43,0.08); }
+    button.wide { grid-column: 1 / -1; }
+    button.primary { background: #f0ff2b; color: #111408; font-weight: 600; border-color: #f0ff2b; }
+    button.primary:hover { background: #fff; border-color: #fff; }
+    .key {
+      display: block;
+      font-size: 9px;
+      color: rgba(240,255,43,0.45);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    button.primary .key { color: rgba(17,20,8,0.6); }
+
+    #scenes, #chars { list-style: none; }
+    #scenes li {
+      padding: 6px 8px;
+      border-left: 2px solid rgba(240,255,43,0.25);
+      margin-bottom: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      line-height: 1.4;
+      color: rgba(240,255,43,0.85);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #scenes li:hover { border-color: #f0ff2b; background: rgba(240,255,43,0.08); color: #f0ff2b; }
+    #chars li {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 2px;
+      font-size: 11px;
+      color: rgba(240,255,43,0.85);
+    }
+    #chars li span:last-child { color: rgba(240,255,43,0.45); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .stat {
+      border: 1px solid rgba(240,255,43,0.15);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+    }
+    .stat b { display: block; font-size: 18px; font-weight: 600; }
+    .stat span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(240,255,43,0.5); }
+
+    .muted { color: rgba(240,255,43,0.4); font-size: 11px; font-style: italic; padding: 4px 2px; }
+    #status { font-size: 10px; color: rgba(240,255,43,0.5); min-height: 14px; margin-top: 8px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <h2>Formát riadku</h2>
+  <div class="grid">
+    <button class="wide primary" onclick="run('autoFormatSelection')">✨ Rozpoznať automaticky<span class="key">označ riadok a klikni</span></button>
+    <button onclick="run('fmtScena')">Scéna<span class="key">INT./EXT.</span></button>
+    <button onclick="run('fmtAkcia')">Akcia<span class="key">popis</span></button>
+    <button onclick="run('fmtPostava')">Postava<span class="key">MENO</span></button>
+    <button onclick="run('fmtDialog')">Dialóg<span class="key">replika</span></button>
+    <button onclick="run('fmtZatvorka')">Zátvorka<span class="key">(potichu)</span></button>
+    <button onclick="run('fmtPrechod')">Prechod<span class="key">STRIH NA:</span></button>
+  </div>
+
+  <h2>Dokument</h2>
+  <div class="grid">
+    <button onclick="run('setupDocument')">Nastaviť stránku</button>
+    <button onclick="run('insertTitlePage')">Titulná strana</button>
+    <button onclick="run('numberScenes')">Očíslovať scény</button>
+    <button onclick="run('autoFormatDocument')">Preformátovať celý</button>
+  </div>
+
+  <h2>Štatistiky</h2>
+  <div class="stats" id="stats">
+    <div class="stat"><b id="st-pages">–</b><span>strán</span></div>
+    <div class="stat"><b id="st-min">–</b><span>≈ minút</span></div>
+    <div class="stat"><b id="st-scenes">–</b><span>scén</span></div>
+    <div class="stat"><b id="st-words">–</b><span>slov</span></div>
+  </div>
+
+  <h2>Scény</h2>
+  <ul id="scenes"><li class="muted">Načítavam…</li></ul>
+
+  <h2>Postavy</h2>
+  <ul id="chars"><li class="muted">Načítavam…</li></ul>
+
+  <div class="grid" style="margin-top:14px">
+    <button class="wide" onclick="refresh()">↻ Obnoviť prehľad</button>
+  </div>
+  <div id="status"></div>
+
+  <script>
+    function status(msg) {
+      document.getElementById('status').textContent = msg || '';
+    }
+
+    function run(fn) {
+      status('Pracujem…');
+      google.script.run
+        .withSuccessHandler(function () { status(''); refresh(); })
+        .withFailureHandler(function (e) { status('Chyba: ' + e.message); })
+        [fn]();
+    }
+
+    function refresh() {
+      status('Obnovujem…');
+      google.script.run
+        .withSuccessHandler(render)
+        .withFailureHandler(function (e) { status('Chyba: ' + e.message); })
+        .getSidebarData();
+    }
+
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function render(data) {
+      status('');
+      document.getElementById('st-pages').textContent = data.stats.pages;
+      document.getElementById('st-min').textContent = data.stats.minutes;
+      document.getElementById('st-scenes').textContent = data.stats.scenes;
+      document.getElementById('st-words').textContent = data.stats.words;
+
+      var scenes = document.getElementById('scenes');
+      if (data.scenes.length === 0) {
+        scenes.innerHTML = '<li class="muted">Zatiaľ žiadne scény (INT./EXT.)</li>';
+      } else {
+        scenes.innerHTML = data.scenes.map(function (s, i) {
+          return '<li onclick="jump(' + s.index + ')" title="' + esc(s.text) + '">' + esc(s.text) + '</li>';
+        }).join('');
+      }
+
+      var chars = document.getElementById('chars');
+      if (data.characters.length === 0) {
+        chars.innerHTML = '<li class="muted">Zatiaľ žiadne postavy</li>';
+      } else {
+        chars.innerHTML = data.characters.map(function (c) {
+          return '<li><span>' + esc(c.name) + '</span><span>' + c.count + '×</span></li>';
+        }).join('');
+      }
+    }
+
+    function jump(idx) {
+      google.script.run
+        .withFailureHandler(function (e) { status('Chyba: ' + e.message); })
+        .jumpToScene(idx);
+    }
+
+    refresh();
+  </script>
+</body>
+</html>
